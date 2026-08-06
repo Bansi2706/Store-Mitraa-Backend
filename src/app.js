@@ -12,6 +12,7 @@ const vendorRoutes = require("./routes/vendor.routes");
 const vendorBillRoutes = require("./routes/vendorBill.routes");
 const customerRoutes = require("./routes/customer.routes");
 const invoiceRoutes = require("./routes/invoice.routes");
+const expenseRoutes = require("./routes/expense.routes");
 
 // Middlewares
 app.use(express.json());
@@ -38,5 +39,6 @@ app.use("/api/vendors", vendorRoutes);
 app.use("/api/vendor-bills", vendorBillRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/expenses", expenseRoutes);
 
 module.exports = app;

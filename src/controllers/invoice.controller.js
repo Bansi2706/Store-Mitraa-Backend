@@ -258,7 +258,7 @@ const searchInvoices = asyncHandler(async (req, res) => {
 
   const values = [owner_id];
 
-  if (keyword) {
+  if (keyword.trim()) {
     query += `
       AND (
         i.invoice_number LIKE ?
@@ -268,12 +268,13 @@ const searchInvoices = asyncHandler(async (req, res) => {
       )
     `;
 
-    const search = `%${keyword}%`;
+    const search = `%${keyword.trim()}%`;
 
     values.push(search, search, search, search);
   }
 
-  if (status) {
+  // "All Invoices" ke liye status filter skip karo
+  if (status && status.toLowerCase() !== "all") {
     query += `
       AND i.payment_status = ?
     `;

@@ -312,3 +312,54 @@ CREATE TABLE invoice_items (
         REFERENCES products(id)
         ON DELETE CASCADE
 );
+
+-------------------------------------
+-- Expenses
+-------------------------------------
+CREATE TABLE expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    owner_id INT NOT NULL,
+
+    title VARCHAR(255) NOT NULL,
+
+    category ENUM(
+        'Rent',
+        'Electricity',
+        'Water',
+        'Maintenance',
+        'Salaries',
+        'Internet',
+        'Utilities',
+        'Supplies',
+        'Transport',
+        'Repairs',
+        'Marketing',
+        'Miscellaneous'
+    ) NOT NULL,
+
+    amount DECIMAL(12,2) NOT NULL,
+
+    payment_mode ENUM(
+        'Cash',
+        'UPI',
+        'Card',
+        'Bank Transfer',
+        'Cheque',
+        'Auto Debit',
+        'Other'
+    ) NOT NULL,
+
+    expense_date DATE NOT NULL,
+
+    notes TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_expense_owner
+        FOREIGN KEY (owner_id)
+        REFERENCES owners(id)
+        ON DELETE CASCADE
+);
