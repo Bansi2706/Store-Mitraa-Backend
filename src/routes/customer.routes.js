@@ -12,7 +12,9 @@ const {
   searchCustomers,
   getCustomerDashboard,
   getRevenueTrend,
-  getGrowthMix
+  getGrowthMix,
+  getTopCustomers,
+  filterCustomers
 } = require("../controllers/customer.controller");
 
 router.post("/", verifyToken, createCustomer);
@@ -28,6 +30,12 @@ router.get("/growth-mix", verifyToken, getGrowthMix);
 
 // Search customers
 router.get("/search", verifyToken, searchCustomers);
+
+//filter
+router.get("/filter", verifyToken, filterCustomers);
+
+//Top 4 customers
+router.get("/top", verifyToken, getTopCustomers);
 
 router.get("/", verifyToken, getAllCustomers);
 

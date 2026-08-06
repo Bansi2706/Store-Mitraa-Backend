@@ -1,10 +1,58 @@
 const customerGetQueries = {
   getAllCustomers: `
-    SELECT *
-    FROM customers
-    WHERE owner_id = ?
-    ORDER BY created_at DESC
-  `,
+SELECT
+    c.id,
+    c.owner_id,
+
+    c.first_name,
+    c.last_name,
+    c.phone_number,
+    c.email,
+
+    c.city,
+    c.state,
+    c.pincode,
+    c.gst_number,
+    c.address,
+
+    c.status,
+
+    c.created_at,
+    c.updated_at,
+
+    COUNT(DISTINCT i.id) AS total_orders,
+
+    IFNULL(SUM(i.total_amount), 0) AS revenue,
+
+    IFNULL(SUM(i.remaining_amount), 0) AS outstanding,
+
+    MAX(i.created_at) AS last_bill
+
+FROM customers c
+
+LEFT JOIN invoices i
+    ON c.id = i.customer_id
+
+WHERE c.owner_id = ?
+
+GROUP BY
+    c.id,
+    c.owner_id,
+    c.first_name,
+    c.last_name,
+    c.phone_number,
+    c.email,
+    c.city,
+    c.state,
+    c.pincode,
+    c.gst_number,
+    c.address,
+    c.status,
+    c.created_at,
+    c.updated_at
+
+ORDER BY c.created_at DESC
+`,
 
   getCustomerById: `
     SELECT *
@@ -133,6 +181,55 @@ GROUP BY
 ORDER BY
     YEAR(i.created_at),
     MONTH(i.created_at)
+`,
+
+filterCustomers: `
+SELECT
+    c.*,
+
+    COUNT(i.id) AS total_orders,
+
+    IFNULL(SUM(i.total_amount), 0) AS total_spent,
+
+    IFNULL(SUM(i.remaining_amount), 0) AS outstanding_amount,
+
+    MAX(i.created_at) AS last_invoice_date
+
+FROM customers c
+
+LEFT JOIN invoices i
+ON c.id = i.customer_id
+
+WHERE c.owner_id = ?
+
+GROUP BY c.id
+`,
+
+getTopCustomers: `
+SELECT
+    c.id,
+    c.first_name,
+    c.last_name,
+    c.status,
+
+    COUNT(DISTINCT i.id) AS total_orders,
+
+    IFNULL(SUM(i.total_amount), 0) AS revenue,
+
+    IFNULL(SUM(i.remaining_amount), 0) AS outstanding
+
+FROM customers c
+
+LEFT JOIN invoices i
+ON c.id = i.customer_id
+
+WHERE c.owner_id = ?
+
+GROUP BY c.id
+
+ORDER BY revenue DESC
+
+LIMIT 4
 `,
 
 };

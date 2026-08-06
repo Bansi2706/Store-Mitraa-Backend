@@ -169,6 +169,88 @@ WHERE id = ?
 AND owner_id = ?
 `,
 
+getInvoiceDashboard: `
+SELECT
+    COUNT(*) AS total_invoices,
+
+    IFNULL(SUM(total_amount), 0) AS total_sales_amount,
+
+    IFNULL(SUM(discount_total), 0) AS total_discount_given,
+
+    IFNULL(SUM(total_amount - (
+        SELECT IFNULL(SUM(ii.buying_price * ii.quantity), 0)
+        FROM invoice_items ii
+        WHERE ii.invoice_id = invoices.id
+    )), 0) AS total_profit,
+
+    IFNULL(SUM(
+        CASE
+            WHEN DATE(created_at) = CURDATE()
+            THEN total_amount
+            ELSE 0
+        END
+    ), 0) AS today_sales,
+
+    IFNULL(SUM(
+        CASE
+            WHEN YEAR(created_at) = YEAR(CURDATE())
+            AND MONTH(created_at) = MONTH(CURDATE())
+            THEN total_amount
+            ELSE 0
+        END
+    ), 0) AS monthly_sales,
+
+    IFNULL(SUM(remaining_amount), 0) AS pending_amount,
+
+    IFNULL(SUM(paid_amount), 0) AS paid_amount,
+
+    SUM(
+        CASE
+            WHEN payment_status = 'Paid'
+            THEN 1
+            ELSE 0
+        END
+    ) AS paid_invoices,
+
+    SUM(
+        CASE
+            WHEN payment_status = 'Pending'
+            THEN 1
+            ELSE 0
+        END
+    ) AS pending_invoices,
+
+    SUM(
+        CASE
+            WHEN payment_status = 'Partial'
+            THEN 1
+            ELSE 0
+        END
+    ) AS partial_invoices
+
+FROM invoices
+
+WHERE owner_id = ?
+`,
+
+getInvoiceShare: `
+SELECT
+    i.id,
+    i.invoice_number,
+    i.total_amount,
+
+    c.first_name,
+    c.last_name,
+    c.phone_number
+
+FROM invoices i
+
+INNER JOIN customers c
+    ON c.id = i.customer_id
+
+WHERE i.id = ?
+AND i.owner_id = ?
+`,
 };
 
 module.exports = invoiceGetQueries;

@@ -94,6 +94,185 @@ const getCustomerById = asyncHandler(async (req, res) => {
   });
 });
 
+//Search Customer
+const searchCustomers = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+  const { search } = req.query;
+
+  if (!search) {
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
+  }
+
+  const keyword = `%${search}%`;
+
+  const [customers] = await db.query(
+    customerGetQueries.searchCustomers,
+    [
+      owner_id,
+      keyword,
+      keyword,
+      keyword,
+      keyword,
+    ]
+  );
+
+  res.status(200).json({
+    success: true,
+    data: customers,
+  });
+});
+
+//Dashboard
+const getCustomerDashboard = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+
+  const [result] = await db.query(
+    customerGetQueries.getCustomerDashboard,
+    [
+      owner_id,
+      owner_id,
+      owner_id,
+      owner_id,
+      owner_id,
+    ]
+  );
+
+  res.status(200).json({
+    success: true,
+    data: result[0],
+  });
+});
+
+//Chart(Sales,paid)
+const getRevenueTrend = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+
+  const [result] = await db.query(
+    customerGetQueries.getRevenueTrend,
+    [owner_id]
+  );
+
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+});
+
+//Customers chart
+const getGrowthMix = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+
+  const [result] = await db.query(
+    customerGetQueries.getGrowthMix,
+    [owner_id]
+  );
+
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+});
+
+//filter
+const filterCustomers = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+
+  const {
+    keyword,
+    status,
+    sort
+  } = req.query;
+
+  const [rows] = await db.query(
+    customerGetQueries.filterCustomers,
+    [owner_id]
+  );
+
+  let customers = rows;
+
+  // Search
+  if (keyword) {
+    const search = keyword.toLowerCase();
+
+    customers = customers.filter(c =>
+      (c.first_name || "").toLowerCase().includes(search) ||
+      (c.last_name || "").toLowerCase().includes(search) ||
+      (c.phone_number || "").includes(search) ||
+      (c.email || "").toLowerCase().includes(search) ||
+      (c.city || "").toLowerCase().includes(search)
+    );
+  }
+
+  // Status
+  if (status && status !== "All") {
+    customers = customers.filter(c => c.status === status);
+  }
+
+  // Sorting
+  switch (sort) {
+    case "recent":
+      customers.sort(
+        (a, b) =>
+          new Date(b.last_invoice_date || 0) -
+          new Date(a.last_invoice_date || 0)
+      );
+      break;
+
+    case "highest_spending":
+      customers.sort(
+        (a, b) => b.total_spent - a.total_spent
+      );
+      break;
+
+    case "most_orders":
+      customers.sort(
+        (a, b) => b.total_orders - a.total_orders
+      );
+      break;
+
+    case "highest_outstanding":
+      customers.sort(
+        (a, b) => b.outstanding_amount - a.outstanding_amount
+      );
+      break;
+
+    case "name_asc":
+      customers.sort((a, b) =>
+        a.first_name.localeCompare(b.first_name)
+      );
+      break;
+
+    case "name_desc":
+      customers.sort((a, b) =>
+        b.first_name.localeCompare(a.first_name)
+      );
+      break;
+  }
+
+  res.status(200).json({
+    success: true,
+    data: customers,
+  });
+});
+
+//Top 4 cutomers
+const getTopCustomers = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+
+  const [customers] = await db.query(
+    customerGetQueries.getTopCustomers,
+    [owner_id]
+  );
+
+  res.status(200).json({
+    success: true,
+    data: customers,
+  });
+});
+
 // Update Customer
 const updateCustomer = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -179,96 +358,17 @@ const deleteCustomer = asyncHandler(async (req, res) => {
   });
 });
 
-//Search Customer
-const searchCustomers = asyncHandler(async (req, res) => {
-  const owner_id = req.owner.id;
-  const { search } = req.query;
-
-  if (!search) {
-    return res.status(200).json({
-      success: true,
-      data: [],
-    });
-  }
-
-  const keyword = `%${search}%`;
-
-  const [customers] = await db.query(
-    customerGetQueries.searchCustomers,
-    [
-      owner_id,
-      keyword,
-      keyword,
-      keyword,
-      keyword,
-    ]
-  );
-
-  res.status(200).json({
-    success: true,
-    data: customers,
-  });
-});
-
-//Dashboard
-const getCustomerDashboard = asyncHandler(async (req, res) => {
-  const owner_id = req.owner.id;
-
-  const [result] = await db.query(
-    customerGetQueries.getCustomerDashboard,
-    [
-      owner_id,
-      owner_id,
-      owner_id,
-      owner_id,
-      owner_id,
-    ]
-  );
-
-  res.status(200).json({
-    success: true,
-    data: result[0],
-  });
-});
-
-//Chart(Sales,paid)
-const getRevenueTrend = asyncHandler(async (req, res) => {
-  const owner_id = req.owner.id;
-
-  const [result] = await db.query(
-    customerGetQueries.getRevenueTrend,
-    [owner_id]
-  );
-
-  res.status(200).json({
-    success: true,
-    data: result,
-  });
-});
-
-//Customers chart
-const getGrowthMix = asyncHandler(async (req, res) => {
-  const owner_id = req.owner.id;
-
-  const [result] = await db.query(
-    customerGetQueries.getGrowthMix,
-    [owner_id]
-  );
-
-  res.status(200).json({
-    success: true,
-    data: result,
-  });
-});
 
 module.exports = {
   createCustomer,
   getAllCustomers,
   getCustomerById,
-  updateCustomer,
-  deleteCustomer,
   searchCustomers,
   getCustomerDashboard,
   getRevenueTrend,
-  getGrowthMix
+  getGrowthMix,
+  filterCustomers,
+  getTopCustomers,
+  updateCustomer,
+  deleteCustomer,
 };

@@ -4,27 +4,54 @@ const router = express.Router();
 const verifyToken = require("../middleware/auth.middleware");
 
 const {
-  createInvoice, getAllInvoices, searchInvoices, calculateInvoice, getInvoicePreview, getInvoiceById, generateInvoicePDFController, downloadInvoicePDF, updateInvoice, deleteInvoice
+  createInvoice,
+  getAllInvoices,
+  searchInvoices,
+  calculateInvoice,
+  getInvoiceDashboard,
+  getInvoicePreview,
+  getInvoiceById,
+  generateInvoicePDFController,
+  downloadInvoicePDF,
+  shareInvoice,
+  updateInvoice,
+  deleteInvoice,
 } = require("../controllers/invoice.controller");
 
-router.post("/", verifyToken, createInvoice);
+// Dashboard
+router.get("/dashboard", verifyToken, getInvoiceDashboard);
 
-router.get("/", verifyToken, getAllInvoices);
-
+// Search
 router.get("/search", verifyToken, searchInvoices);
 
-router.post("/calculate",verifyToken, calculateInvoice);
+// Calculate Invoice
+router.post("/calculate", verifyToken, calculateInvoice);
 
+// Create Invoice
+router.post("/", verifyToken, createInvoice);
+
+// Get All Invoices
+router.get("/", verifyToken, getAllInvoices);
+
+// Invoice Preview
 router.get("/:id/preview", verifyToken, getInvoicePreview);
 
+// Generate PDF
 router.get("/:id/pdf", verifyToken, generateInvoicePDFController);
 
+// Download PDF
 router.get("/:id/download", verifyToken, downloadInvoicePDF);
 
+//Share 
+router.get("/:id/share", verifyToken, shareInvoice);
+
+// Get Invoice By ID
 router.get("/:id", verifyToken, getInvoiceById);
 
+// Update Invoice
 router.put("/:id", verifyToken, updateInvoice);
 
+// Delete Invoice
 router.delete("/:id", verifyToken, deleteInvoice);
 
 module.exports = router;

@@ -355,6 +355,50 @@ const getInvoicePreview = asyncHandler(async (req, res) => {
   });
 });
 
+const getInvoiceDashboard = asyncHandler(async (req, res) => {
+  const owner_id = req.owner.id;
+
+  const [result] = await db.query(
+    invoiceGetQueries.getInvoiceDashboard,
+    [owner_id]
+  );
+
+  res.status(200).json({
+    success: true,
+    data: result[0],
+  });
+});
+
+const shareInvoice = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const owner_id = req.owner.id;
+
+  const [invoice] = await db.query(
+    invoiceGetQueries.getInvoicePreview,
+    [id, owner_id]
+  );
+
+  if (invoice.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "Invoice not found",
+    });
+  }
+
+  const data = invoice[0];
+
+  res.status(200).json({
+    success: true,
+    data: {
+      customer_name: `${data.first_name} ${data.last_name}`.trim(),
+      phone_number: data.phone_number,
+      invoice_number: data.invoice_number,
+      total_amount: data.total_amount,
+      pdf_url: `${req.protocol}://${req.get("host")}/api/invoices/${id}/download`,
+    },
+  });
+});
+
 const updateInvoice = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -828,10 +872,12 @@ module.exports = {
   getAllInvoices,
   searchInvoices,
   getInvoiceById,
+  getInvoiceDashboard,
   getInvoicePreview,
   calculateInvoice,
   generateInvoicePDFController,
   downloadInvoicePDF,
+  shareInvoice,
   updateInvoice,
   deleteInvoice,
 };
