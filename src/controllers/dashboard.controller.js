@@ -157,14 +157,16 @@ const getDashboardOverview = asyncHandler(async (req, res) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
 
-    const dateStr = d.toISOString().slice(0, 10); // YYYY-MM-DD
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
     const label = d
       .toLocaleString("en-US", { weekday: "short" })
       .toUpperCase();
 
-    const found = trendRows.find(
-      (row) => row.sale_date.toISOString().slice(0, 10) === dateStr
-    );
+    const found = trendRows.find((row) => row.sale_date === dateStr);
 
     sales_trends.push({
       label,

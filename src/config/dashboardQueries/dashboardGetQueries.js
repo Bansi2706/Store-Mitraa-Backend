@@ -97,12 +97,12 @@ LIMIT 5
 
   getSalesTrendLast7Days: `
 SELECT
-    DATE(created_at) AS sale_date,
+    DATE_FORMAT(created_at, '%Y-%m-%d') AS sale_date,
     SUM(total_amount) AS total
 FROM invoices
 WHERE owner_id = ?
 AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-GROUP BY DATE(created_at)
+GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
 ORDER BY sale_date ASC
 `,
 

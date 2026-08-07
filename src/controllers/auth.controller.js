@@ -9,15 +9,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const { signAccessToken } = require("../utils/jwt");
 
 const register = asyncHandler(async (req, res) => {
-  const {
-    shop_name,
-    owner_name,
-    email,
-    phone,
-    whatsapp,
-    address,
-    password,
-  } = req.body;
+  const { shop_name, owner_name, email, phone, whatsapp, address, password } =
+    req.body;
 
   const [emailExists] = await db.query(authPostQueries.checkEmail, [email]);
 
@@ -120,13 +113,13 @@ const updateProfile = asyncHandler(async (req, res) => {
     phone,
     whatsapp,
     address,
+    language,
+    timezone,
+    two_factor_enabled,
   } = req.body;
 
   // Get current profile
-  const [owners] = await db.query(
-    authGetQueries.getProfile,
-    [ownerId]
-  );
+  const [owners] = await db.query(authGetQueries.getProfile, [ownerId]);
 
   if (owners.length === 0) {
     return res.status(404).json({
@@ -148,6 +141,9 @@ const updateProfile = asyncHandler(async (req, res) => {
     whatsapp,
     address,
     logo,
+    language,
+    timezone,
+    two_factor_enabled,
     ownerId,
   ]);
 
@@ -157,9 +153,74 @@ const updateProfile = asyncHandler(async (req, res) => {
   });
 });
 
+const updatePassword = asyncHandler(async (req, res) => {
+  const ownerId = req.owner.id;
+
+  const {
+    current_password,
+    new_password,
+    confirm_password,
+  } = req.body;
+
+  // Validation
+  if (!current_password || !new_password || !confirm_password) {
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required",
+    });
+  }
+
+  if (new_password !== confirm_password) {
+    return res.status(400).json({
+      success: false,
+      message: "Passwords do not match",
+    });
+  }
+
+  const [owners] = await db.query(
+    authPostQueries.login,
+    [req.owner.email]
+  );
+
+  const owner = owners[0];
+
+  const isMatch = await bcrypt.compare(
+    current_password,
+    owner.password
+  );
+
+  if (!isMatch) {
+    return res.status(400).json({
+      success: false,
+      message: "Current password is incorrect",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(new_password, 10);
+
+  await db.query(authPutQueries.updatePassword, [
+    hashedPassword,
+    ownerId,
+  ]);
+
+  res.status(200).json({
+    success: true,
+    message: "Password updated successfully",
+  });
+});
+
+const logout = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Logout successful",
+  });
+});
+
 module.exports = {
   register,
   login,
   getProfile,
-  updateProfile
+  updateProfile,
+  updatePassword,
+  logout
 };

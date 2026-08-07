@@ -14,6 +14,9 @@ CREATE TABLE owners (
     address VARCHAR(255),
     logo VARCHAR(255),
     password VARCHAR(255) NOT NULL,
+    language VARCHAR(50) DEFAULT 'English (US)',
+    timezone VARCHAR(100) DEFAULT '(GMT+05:30) India Standard Time',
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

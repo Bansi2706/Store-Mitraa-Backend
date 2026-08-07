@@ -8,7 +8,10 @@ const authGetQueries = {
       phone,
       whatsapp,
       address,
-      logo
+      logo,
+      language,
+      timezone,
+      two_factor_enabled
     FROM owners
     WHERE id = ?
   `,

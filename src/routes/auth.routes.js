@@ -7,15 +7,22 @@ const {
   register,
   login,
   getProfile,
-  updateProfile
+  updateProfile,
+  updatePassword,
+  logout
 } = require("../controllers/auth.controller");
 
 // Register, login
 router.post("/register", register);
+
 router.post("/login", login);
 
 router.get("/profile", verifyToken, getProfile);
 
 router.put( "/profile", verifyToken, uploadLogo.single("logo"), updateProfile );
+
+router.put("/change-password", verifyToken, updatePassword);
+
+router.post("/logout", verifyToken, logout);
 
 module.exports = router;

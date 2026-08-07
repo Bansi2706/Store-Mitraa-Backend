@@ -14,7 +14,8 @@ const {
   getRevenueTrend,
   getGrowthMix,
   getTopCustomers,
-  filterCustomers
+  filterCustomers,
+  getCustomerAnalytics
 } = require("../controllers/customer.controller");
 
 router.post("/", verifyToken, createCustomer);
@@ -40,6 +41,8 @@ router.get("/top", verifyToken, getTopCustomers);
 router.get("/", verifyToken, getAllCustomers);
 
 router.get("/:id", verifyToken, getCustomerById);
+
+router.get("/:id/analytics", verifyToken, getCustomerAnalytics);
 
 router.put("/:id", verifyToken, updateCustomer);
 

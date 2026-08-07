@@ -7,11 +7,18 @@ const authPutQueries = {
       phone = ?,
       whatsapp = ?,
       address = ?,
-      logo = ?
+      logo = ?,
+      language = ?,
+      timezone = ?,
+      two_factor_enabled = ?
     WHERE id = ?
   `,
 
-
+  updatePassword: `
+    UPDATE owners
+    SET password = ?
+    WHERE id = ?
+  `,
 };
 
 module.exports = authPutQueries;
