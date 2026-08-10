@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
 
 const app = express();
 app.set("json spaces", 2);
@@ -10,9 +11,9 @@ app.set("json spaces", 2);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-app.use(helmet());
+app.use(helmet({crossOriginResourcePolicy: { policy: "cross-origin" }}));
 app.use(morgan("dev"));
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");

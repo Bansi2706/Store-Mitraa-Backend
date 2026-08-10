@@ -93,7 +93,10 @@ const login = asyncHandler(async (req, res) => {
 const getProfile = asyncHandler(async (req, res) => {
   const ownerId = req.owner.id;
 
-  const [owner] = await db.query(authGetQueries.getProfile, [ownerId]);
+  const [owner] = await db.query(
+    authGetQueries.getProfile,
+    [ownerId]
+  );
 
   if (owner.length === 0) {
     return res.status(404).json({
@@ -102,9 +105,20 @@ const getProfile = asyncHandler(async (req, res) => {
     });
   }
 
+  const profile = owner[0];
+
+ if (profile.logo) {
+  const safeOwnerName = profile.owner_name
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  profile.logo = `/uploads/owners/owner_${ownerId}_${safeOwnerName}/${profile.logo}`;
+}
+
   res.status(200).json({
     success: true,
-    data: owner[0],
+    data: profile,
   });
 });
 
@@ -137,13 +151,20 @@ const updateProfile = asyncHandler(async (req, res) => {
   // Keep old logo if new logo not uploaded
   const logo = req.file ? req.file.filename : owner.logo;
 
+  // 👇 Fallback for other fields too — empty string ya undefined aane par purani value use karo
+  const finalShopName = shop_name?.trim() ? shop_name.trim() : owner.shop_name;
+  const finalOwnerName = owner_name?.trim() ? owner_name.trim() : owner.owner_name;
+  const finalPhone = phone?.trim() ? phone.trim() : owner.phone;
+  const finalWhatsapp = whatsapp?.trim() ? whatsapp.trim() : owner.whatsapp;
+  const finalAddress = address?.trim() ? address.trim() : owner.address;
+
   // Update Profile
   await db.query(authPutQueries.updateProfile, [
-    shop_name,
-    owner_name,
-    phone,
-    whatsapp,
-    address,
+    finalShopName,
+    finalOwnerName,
+    finalPhone,
+    finalWhatsapp,
+    finalAddress,
     logo,
     language,
     timezone,

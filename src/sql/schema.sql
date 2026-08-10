@@ -45,7 +45,7 @@ CREATE TABLE products (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (owner_id) REFERENCES owners(id)
+    FOREIGN KEY (owner_id) REFERENCES owners(id) ON DELETE CASCADE
 );
 
 -------------------------------------
