@@ -6,6 +6,14 @@ const morgan = require("morgan");
 const app = express();
 app.set("json spaces", 2);
 
+// Middlewares
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(helmet());
+app.use(morgan("dev"));
+app.use("/uploads", express.static("uploads"));
+
 const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const vendorRoutes = require("./routes/vendor.routes");
@@ -15,15 +23,6 @@ const invoiceRoutes = require("./routes/invoice.routes");
 const expenseRoutes = require("./routes/expense.routes");
 const dashboardRoutes = require('./routes/dashboard.routes');
 const reportsRoutes = require("./routes/reports.routes");
-
-// Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-app.use(helmet());
-app.use(morgan("dev"));
-app.use("/uploads", express.static("uploads"));
-
 
 // Test Route
 app.get("/", (req, res) => {

@@ -366,3 +366,22 @@ CREATE TABLE expenses (
         REFERENCES owners(id)
         ON DELETE CASCADE
 );
+
+-------------------------------------
+-- Password Resets
+-------------------------------------
+CREATE TABLE password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    owner_id INT NOT NULL,
+
+    otp VARCHAR(6) NOT NULL,
+
+    expires_at DATETIME NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (owner_id)
+    REFERENCES owners(id)
+    ON DELETE CASCADE
+);

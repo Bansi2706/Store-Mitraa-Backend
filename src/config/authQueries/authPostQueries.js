@@ -31,6 +31,58 @@ const authPostQueries = {
     FROM owners
     WHERE email = ?
   `,
+
+  checkForgotEmail: `
+  SELECT
+    id,
+    email,
+    owner_name
+  FROM owners
+  WHERE email = ?
+`,
+
+saveOTP: `
+  INSERT INTO password_resets
+  (
+    owner_id,
+    otp,
+    expires_at
+  )
+  VALUES (?, ?, ?)
+`,
+
+verifyOTP: `
+SELECT
+    pr.id,
+    pr.owner_id,
+    pr.otp,
+    pr.expires_at,
+    o.email
+FROM password_resets pr
+
+INNER JOIN owners o
+    ON o.id = pr.owner_id
+
+WHERE
+    o.email = ?
+    AND pr.otp = ?
+`,
+
+verifyResetOTP: `
+SELECT
+    pr.owner_id,
+    pr.otp,
+    pr.expires_at
+FROM password_resets pr
+
+INNER JOIN owners o
+    ON o.id = pr.owner_id
+
+WHERE
+    o.email = ?
+    AND pr.otp = ?
+`,
+
 };
 
 module.exports = authPostQueries;

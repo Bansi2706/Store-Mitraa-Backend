@@ -19,6 +19,12 @@ const authPutQueries = {
     SET password = ?
     WHERE id = ?
   `,
+
+  resetPassword: `
+UPDATE owners
+SET password = ?
+WHERE id = ?
+`,
 };
 
 module.exports = authPutQueries;
