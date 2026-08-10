@@ -31,6 +31,9 @@ const storage = multer.diskStorage({
         .replace(/[^a-zA-Z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "");
 
+      // owner_3_Parth_Sapariya (same pattern as the logo upload folder)
+      const ownerFolder = `owner_${ownerId}_${safeOwnerName}`;
+
       const safeProductName = productName
         .trim()
         .replace(/[^a-zA-Z0-9]+/g, "_")
@@ -39,7 +42,7 @@ const storage = multer.diskStorage({
       const uploadPath = path.join(
         __dirname,
         "../../uploads/products",
-        safeOwnerName,
+        ownerFolder,
         safeProductName
       );
 

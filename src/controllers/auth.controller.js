@@ -2,6 +2,8 @@ const bcrypt = require("bcrypt");
 const db = require("../config/db");
 
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 const authGetQueries = require("../config/authQueries/authGetQueries");
 const authPostQueries = require("../config/authQueries/authPostQueries");
@@ -151,7 +153,26 @@ const updateProfile = asyncHandler(async (req, res) => {
   // Keep old logo if new logo not uploaded
   const logo = req.file ? req.file.filename : owner.logo;
 
-  // 👇 Fallback for other fields too — empty string ya undefined aane par purani value use karo
+  // 👇 If a new logo was uploaded AND an old one existed, delete the old file from disk
+  if (req.file && owner.logo) {
+    const safeOwnerNameForPath = owner.owner_name
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+    const oldLogoPath = path.join(
+      __dirname,
+      "../../uploads/owners",
+      `owner_${ownerId}_${safeOwnerNameForPath}`,
+      owner.logo
+    );
+
+    if (fs.existsSync(oldLogoPath)) {
+      fs.unlinkSync(oldLogoPath);
+    }
+  }
+
+  // Fallback for other fields — empty string ya undefined aane par purani value use karo
   const finalShopName = shop_name?.trim() ? shop_name.trim() : owner.shop_name;
   const finalOwnerName = owner_name?.trim() ? owner_name.trim() : owner.owner_name;
   const finalPhone = phone?.trim() ? phone.trim() : owner.phone;
@@ -172,9 +193,23 @@ const updateProfile = asyncHandler(async (req, res) => {
     ownerId,
   ]);
 
+  // Fresh data fetch karke logo ka full path banao (frontend state update ke liye)
+  const [updatedOwners] = await db.query(authGetQueries.getProfile, [ownerId]);
+  const updatedProfile = updatedOwners[0];
+
+  if (updatedProfile.logo) {
+    const safeOwnerName = updatedProfile.owner_name
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+    updatedProfile.logo = `/uploads/owners/owner_${ownerId}_${safeOwnerName}/${updatedProfile.logo}`;
+  }
+
   res.status(200).json({
     success: true,
     message: "Profile updated successfully",
+    data: updatedProfile,
   });
 });
 
