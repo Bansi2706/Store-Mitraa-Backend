@@ -755,11 +755,14 @@ const generateInvoicePDFController = asyncHandler(async (req, res) => {
     items,
   };
 
-  const customerFolder =
-    `customer_${invoice[0].customer_id}_${invoice[0].first_name}_${invoice[0].last_name || ""}`.replace(
-      /\s+/g,
-      "_",
-    );
+  const customerId = invoice[0].customer_id;
+  const firstName = invoice[0].first_name || "";
+  const lastName = invoice[0].last_name || "";
+
+  const customerFolder = `customer_${customerId}_${firstName}_${lastName}`
+  .replace(/\s+/g, "_")
+  .replace(/_+/g, "_")
+  .replace(/_$/, "");
 
   const folderPath = path.join(
     __dirname,
@@ -794,22 +797,16 @@ const downloadInvoicePDF = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const owner_id = req.owner.id;
 
-  const [invoice] = await db.query(invoiceGetQueries.getInvoicePdf, [
-    id,
-    owner_id,
-  ]);
+  const [invoice] = await db.query(invoiceGetQueries.getInvoicePdf, [id, owner_id]);
 
   if (invoice.length === 0) {
-    return res.status(404).json({
-      success: false,
-      message: "Invoice not found",
-    });
+    return res.status(404).json({ success: false, message: "Invoice not found" });
   }
 
-  if (!invoice[0].pdf_path) {
+  if (!invoice[0].pdf_path || !fs.existsSync(invoice[0].pdf_path)) {
     return res.status(404).json({
       success: false,
-      message: "PDF not generated",
+      message: "PDF not found on server. Please regenerate.",
     });
   }
 

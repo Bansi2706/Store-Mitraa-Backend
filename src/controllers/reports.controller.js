@@ -76,18 +76,18 @@ const buildPoint = (label, revenue, profit, expenses, collections, outstanding) 
 // GET /api/reports/sales-profit?period=weekly|monthly|quarterly|yearly
 const getSalesProfitReport = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
-
+ 
   const allowedPeriods = ["weekly", "monthly", "quarterly", "yearly"];
   const period = allowedPeriods.includes(req.query.period)
     ? req.query.period
     : "weekly";
-
+ 
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
-
+ 
   let points = [];
-
+ 
   if (period === "weekly") {
     const [invoiceRows] = await db.query(
       reportsGetQueries.getInvoiceStatsByWeekday,
@@ -97,13 +97,13 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       reportsGetQueries.getExpenseStatsByWeekday,
       [owner_id]
     );
-
+ 
     const dayLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-
+ 
     points = dayLabels.map((label, index) => {
       const inv = invoiceRows.find((r) => r.bucket === index);
       const exp = expenseRows.find((r) => r.bucket === index);
-
+ 
       return buildPoint(
         label,
         inv ? Number(inv.revenue) : 0,
@@ -122,7 +122,7 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       reportsGetQueries.getExpenseStatsByDayOfMonth,
       [owner_id]
     );
-
+ 
     const weekBuckets = [1, 2, 3, 4, 5].map(() => ({
       revenue: 0,
       profit: 0,
@@ -130,7 +130,7 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       outstanding: 0,
       expenses: 0,
     }));
-
+ 
     invoiceRows.forEach((row) => {
       const weekIdx = Math.min(Math.ceil(row.bucket / 7), 5) - 1;
       weekBuckets[weekIdx].revenue += Number(row.revenue);
@@ -138,12 +138,12 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       weekBuckets[weekIdx].collections += Number(row.collections);
       weekBuckets[weekIdx].outstanding += Number(row.outstanding);
     });
-
+ 
     expenseRows.forEach((row) => {
       const weekIdx = Math.min(Math.ceil(row.bucket / 7), 5) - 1;
       weekBuckets[weekIdx].expenses += Number(row.total);
     });
-
+ 
     points = weekBuckets.map((bucket, index) =>
       buildPoint(
         `W${index + 1}`,
@@ -157,7 +157,7 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
   } else if (period === "quarterly") {
     const quarterStartMonth = Math.floor((currentMonth - 1) / 3) * 3 + 1;
     const quarterEndMonth = quarterStartMonth + 2;
-
+ 
     const [invoiceRows] = await db.query(
       reportsGetQueries.getInvoiceStatsByMonthRange,
       [owner_id, currentYear, quarterStartMonth, quarterEndMonth]
@@ -166,17 +166,17 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       reportsGetQueries.getExpenseStatsByMonthRange,
       [owner_id, currentYear, quarterStartMonth, quarterEndMonth]
     );
-
+ 
     const monthLabels = [
       "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
       "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
     ];
-
+ 
     points = [];
     for (let m = quarterStartMonth; m <= quarterEndMonth; m++) {
       const inv = invoiceRows.find((r) => r.bucket === m);
       const exp = expenseRows.find((r) => r.bucket === m);
-
+ 
       points.push(
         buildPoint(
           monthLabels[m - 1],
@@ -198,17 +198,17 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       reportsGetQueries.getExpenseStatsByMonthRange,
       [owner_id, currentYear, 1, 12]
     );
-
+ 
     const monthLabels = [
       "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
       "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
     ];
-
+ 
     points = monthLabels.map((label, index) => {
       const m = index + 1;
       const inv = invoiceRows.find((r) => r.bucket === m);
       const exp = expenseRows.find((r) => r.bucket === m);
-
+ 
       return buildPoint(
         label,
         inv ? Number(inv.revenue) : 0,
@@ -219,7 +219,7 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       );
     });
   }
-
+ 
   const totalRevenue = Number(
     points.reduce((sum, p) => sum + p.revenue, 0).toFixed(2)
   );
@@ -230,7 +230,26 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
     totalRevenue === 0
       ? 0
       : Number(((totalProfit / totalRevenue) * 100).toFixed(2));
-
+ 
+  // har point ka apna margin% nikalo (best margin point dhoondne ke liye)
+  const pointsWithMargin = points.map((p) => ({
+    ...p,
+    margin: p.revenue === 0 ? 0 : Number(((p.profit / p.revenue) * 100).toFixed(2)),
+  }));
+ 
+  const bestRevenuePoint = pointsWithMargin.reduce(
+    (best, p) => (p.revenue > best.revenue ? p : best),
+    pointsWithMargin[0]
+  );
+  const bestProfitPoint = pointsWithMargin.reduce(
+    (best, p) => (p.profit > best.profit ? p : best),
+    pointsWithMargin[0]
+  );
+  const bestMarginPoint = pointsWithMargin.reduce(
+    (best, p) => (p.margin > best.margin ? p : best),
+    pointsWithMargin[0]
+  );
+ 
   res.status(200).json({
     success: true,
     data: {
@@ -239,6 +258,18 @@ const getSalesProfitReport = asyncHandler(async (req, res) => {
       total_revenue: totalRevenue,
       total_profit: totalProfit,
       profit_margin: profitMargin,
+      best_revenue: {
+        label: bestRevenuePoint.label,
+        value: bestRevenuePoint.revenue,
+      },
+      best_profit: {
+        label: bestProfitPoint.label,
+        value: bestProfitPoint.profit,
+      },
+      best_margin: {
+        label: bestMarginPoint.label,
+        value: bestMarginPoint.margin,
+      },
     },
   });
 });

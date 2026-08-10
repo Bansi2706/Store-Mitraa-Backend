@@ -17,7 +17,6 @@ const {
 
 router.post("/", verifyToken, upload.array("images", 5), createProduct);
 
-
 router.get("/dashboard", verifyToken, getProductDashboard);
 
 router.get("/filter", verifyToken, filterProducts);

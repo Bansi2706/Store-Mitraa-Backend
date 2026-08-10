@@ -87,7 +87,7 @@ ORDER BY id ASC
 `,
 
 getInvoicePreview: `
-SELECT
+  SELECT
     i.id,
     i.invoice_number,
     i.created_at,
@@ -103,6 +103,7 @@ SELECT
     i.payment_status,
     i.notes,
 
+    c.id AS customer_id,
     c.first_name,
     c.last_name,
     c.phone_number,
@@ -113,13 +114,13 @@ SELECT
     c.pincode,
     c.gst_number
 
-FROM invoices i
+  FROM invoices i
 
-INNER JOIN customers c
+  INNER JOIN customers c
     ON c.id = i.customer_id
 
-WHERE i.id = ?
-AND i.owner_id = ?
+  WHERE i.id = ?
+  AND i.owner_id = ?
 `,
 
 getInvoicePreviewItems: `
