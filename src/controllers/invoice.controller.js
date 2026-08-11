@@ -964,7 +964,7 @@ module.exports = {
   getInvoicePreview,
   calculateInvoice,
   getInvoicePDF,
-    getPublicInvoicePDF,
+  getPublicInvoicePDF,
   shareInvoice,
   updateInvoice,
   deleteInvoice,
