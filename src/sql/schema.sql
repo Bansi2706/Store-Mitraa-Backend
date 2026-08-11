@@ -125,14 +125,6 @@ CREATE TABLE vendor_bills (
 
     due_date DATE,
 
-    reminder_days ENUM(
-    '3 Days',
-    '5 Days',
-    '7 Days',
-    '15 Days',
-    '30 Days'
-    ) DEFAULT '5 Days',
-
     payment_mode ENUM(
     'Not Specified',
     'Cash',

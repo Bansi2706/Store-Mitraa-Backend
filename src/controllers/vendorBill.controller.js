@@ -196,6 +196,7 @@ const filterVendorBills = asyncHandler(async (req, res) => {
     due_start,
     due_end,
     status,
+    payment_mode,
   } = req.query;
 
   let query = `
@@ -228,6 +229,11 @@ const filterVendorBills = asyncHandler(async (req, res) => {
   if (status && status !== "All Statuses") {
     query += ` AND status = ?`;
     values.push(status);
+  }
+
+  if (payment_mode && payment_mode !== "All Payment Modes") {
+    query += ` AND payment_mode = ?`;
+    values.push(payment_mode);
   }
 
   query += ` ORDER BY id DESC`;
