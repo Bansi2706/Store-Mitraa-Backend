@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/auth.middleware");
 const uploadLogo = require("../middleware/uploadLogo.middleware");
+const uploadLogoRegister = require("../middleware/uploadLogoRegister.middleware");
 
 const {
   register,
@@ -17,7 +18,7 @@ const {
 } = require("../controllers/auth.controller");
 
 // Register, login
-router.post("/register", register);
+router.post("/register",  uploadLogoRegister.single("logo"), register);
 
 router.post("/login", login);
 

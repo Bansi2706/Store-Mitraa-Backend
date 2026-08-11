@@ -11,8 +11,7 @@ const {
   getInvoiceDashboard,
   getInvoicePreview,
   getInvoiceById,
-  generateInvoicePDFController,
-  downloadInvoicePDF,
+  getInvoicePDF,        
   shareInvoice,
   updateInvoice,
   deleteInvoice,
@@ -36,11 +35,8 @@ router.get("/", verifyToken, getAllInvoices);
 // Invoice Preview
 router.get("/:id/preview", verifyToken, getInvoicePreview);
 
-// Generate PDF
-router.get("/:id/pdf", verifyToken, generateInvoicePDFController);
-
-// Download PDF
-router.get("/:id/download", verifyToken, downloadInvoicePDF);
+// Generate + Download PDF (combined)          
+router.get("/:id/pdf", verifyToken, getInvoicePDF);   
 
 //Share 
 router.get("/:id/share", verifyToken, shareInvoice);

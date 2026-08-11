@@ -21,6 +21,7 @@ const register = asyncHandler(async (req, res) => {
   const [emailExists] = await db.query(authPostQueries.checkEmail, [email]);
 
   if (emailExists.length > 0) {
+    if (req.file) fs.unlinkSync(req.file.path); // temp cleanup
     return res.status(400).json({
       success: false,
       message: "Email already exists",
@@ -30,6 +31,7 @@ const register = asyncHandler(async (req, res) => {
   const [phoneExists] = await db.query(authPostQueries.checkPhone, [phone]);
 
   if (phoneExists.length > 0) {
+    if (req.file) fs.unlinkSync(req.file.path); // temp cleanup
     return res.status(400).json({
       success: false,
       message: "Phone number already exists",
@@ -40,7 +42,7 @@ const register = asyncHandler(async (req, res) => {
 
   const logo = req.file ? req.file.filename : null;
 
-  await db.query(authPostQueries.register, [
+  const [result] = await db.query(authPostQueries.register, [
     shop_name,
     owner_name,
     email,
@@ -50,6 +52,30 @@ const register = asyncHandler(async (req, res) => {
     logo,
     hashedPassword,
   ]);
+
+  const ownerId = result.insertId;
+
+  // 👇 Temp se owner ke apne folder mein move karo
+  if (req.file) {
+    const safeOwnerName = owner_name
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+    const ownerFolder = path.join(
+      __dirname,
+      "../../uploads/owners",
+      `owner_${ownerId}_${safeOwnerName}`
+    );
+
+    if (!fs.existsSync(ownerFolder)) {
+      fs.mkdirSync(ownerFolder, { recursive: true });
+    }
+
+    const newPath = path.join(ownerFolder, req.file.filename);
+
+    fs.renameSync(req.file.path, newPath);
+  }
 
   res.status(201).json({
     success: true,
@@ -135,7 +161,6 @@ const updateProfile = asyncHandler(async (req, res) => {
     address,
     language,
     timezone,
-    two_factor_enabled,
   } = req.body;
 
   // Get current profile
@@ -189,7 +214,6 @@ const updateProfile = asyncHandler(async (req, res) => {
     logo,
     language,
     timezone,
-    two_factor_enabled,
     ownerId,
   ]);
 

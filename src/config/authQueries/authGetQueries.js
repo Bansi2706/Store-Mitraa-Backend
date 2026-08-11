@@ -10,8 +10,7 @@ const authGetQueries = {
       address,
       logo,
       language,
-      timezone,
-      two_factor_enabled
+      timezone
     FROM owners
     WHERE id = ?
   `,

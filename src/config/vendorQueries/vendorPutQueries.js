@@ -6,7 +6,6 @@ const vendorPutQueries = {
       display_name = ?,
       payment_terms = ?,
       gst_vat_number = ?,
-      default_reminder_days = ?,
       status = ?,
       contact_person = ?,
       email = ?,

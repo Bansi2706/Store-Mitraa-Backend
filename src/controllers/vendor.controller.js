@@ -12,7 +12,6 @@ const createVendor = asyncHandler(async (req, res) => {
     display_name,
     payment_terms,
     gst_vat_number,
-    default_reminder_days,
     status,
     contact_person,
     email,
@@ -28,6 +27,14 @@ const createVendor = asyncHandler(async (req, res) => {
   } = req.body;
 
   const owner_id = req.owner.id;
+
+  // 👇 Phone number compulsory
+  if (!phone || !phone.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "Phone number is required",
+    });
+  }
 
   // Check Email
   if (email) {
@@ -65,7 +72,6 @@ const createVendor = asyncHandler(async (req, res) => {
     display_name,
     payment_terms,
     gst_vat_number,
-    default_reminder_days,
     status,
     contact_person,
     email,
@@ -132,7 +138,6 @@ const updateVendor = asyncHandler(async (req, res) => {
     display_name,
     payment_terms,
     gst_vat_number,
-    default_reminder_days,
     status,
     contact_person,
     email,
@@ -154,7 +159,6 @@ const updateVendor = asyncHandler(async (req, res) => {
       display_name,
       payment_terms,
       gst_vat_number,
-      default_reminder_days,
       status,
       contact_person,
       email,

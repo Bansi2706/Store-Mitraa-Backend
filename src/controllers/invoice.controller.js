@@ -120,9 +120,9 @@ const createInvoice = asyncHandler(async (req, res) => {
 
     // Final Selling Price (per unit)
     const sellingPrice =
-  item.unit_price !== undefined
-    ? Number(item.unit_price)
-    : Math.floor((mrp - (mrp * discountPercentage) / 100) * 100) / 100;
+      item.unit_price !== undefined
+        ? Number(item.unit_price)
+        : Math.floor((mrp - (mrp * discountPercentage) / 100) * 100) / 100;
 
     const tax = Number(item.tax || 0);
 
@@ -142,7 +142,7 @@ const createInvoice = asyncHandler(async (req, res) => {
       quantity,
       buying_price: buyingPrice,
       selling_price: sellingPrice,
-      mrp,     
+      mrp,
       discount_percentage: discountPercentage,
       discount: discountAmount,
       tax,
@@ -209,7 +209,7 @@ const createInvoice = asyncHandler(async (req, res) => {
       item.product.id,
       item.product.product_name,
       item.product.product_sku,
-      item.mrp, 
+      item.mrp,
       item.quantity,
       item.buying_price,
       item.selling_price,
@@ -345,6 +345,17 @@ const getInvoicePreview = asyncHandler(async (req, res) => {
 
   // Get Owner Details
   const [owner] = await db.query(invoiceGetQueries.getOwnerDetails, [owner_id]);
+  
+  const ownerData = owner[0];
+
+  if (ownerData && ownerData.logo) {
+    const safeOwnerName = ownerData.owner_name
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+    ownerData.logo = `/uploads/owners/owner_${owner_id}_${safeOwnerName}/${ownerData.logo}`;
+  }
 
   return res.status(200).json({
     success: true,
@@ -395,7 +406,8 @@ const shareInvoice = asyncHandler(async (req, res) => {
       phone_number: data.phone_number,
       invoice_number: data.invoice_number,
       total_amount: data.total_amount,
-      pdf_url: `${req.protocol}://${req.get("host")}/api/invoices/${id}/download`,
+      // Combined generate+download route
+      pdf_url: `${req.protocol}://${req.get("host")}/api/invoices/${id}/pdf`,
     },
   });
 });
@@ -510,9 +522,9 @@ const updateInvoice = asyncHandler(async (req, res) => {
 
     // Final Selling Price (per unit)
     const sellingPrice =
-  item.unit_price !== undefined
-    ? Number(item.unit_price)
-    : Math.floor((mrp - (mrp * discountPercentage) / 100) * 100) / 100;
+      item.unit_price !== undefined
+        ? Number(item.unit_price)
+        : Math.floor((mrp - (mrp * discountPercentage) / 100) * 100) / 100;
 
     const tax = Number(item.tax || 0);
 
@@ -532,7 +544,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
       quantity,
       buying_price: buyingPrice,
       selling_price: sellingPrice,
-      mrp, 
+      mrp,
       discount_percentage: discountPercentage,
       discount: discountAmount,
       tax,
@@ -594,7 +606,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
       item.product.id,
       item.product.product_name,
       item.product.product_sku,
-      item.mrp,  
+      item.mrp,
       item.quantity,
       item.buying_price,
       item.selling_price,
@@ -716,7 +728,8 @@ const calculateInvoice = asyncHandler(async (req, res) => {
   });
 });
 
-const generateInvoicePDFController = asyncHandler(async (req, res) => {
+// Combined: Regenerate PDF (latest data) + directly send it for download
+const getInvoicePDF = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const owner_id = req.owner.id;
 
@@ -760,9 +773,9 @@ const generateInvoicePDFController = asyncHandler(async (req, res) => {
   const lastName = invoice[0].last_name || "";
 
   const customerFolder = `customer_${customerId}_${firstName}_${lastName}`
-  .replace(/\s+/g, "_")
-  .replace(/_+/g, "_")
-  .replace(/_$/, "");
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/_$/, "");
 
   const folderPath = path.join(
     __dirname,
@@ -776,41 +789,26 @@ const generateInvoicePDFController = asyncHandler(async (req, res) => {
   }
 
   const pdfName = `${invoice[0].invoice_number}.pdf`;
-
   const pdfPath = path.join(folderPath, pdfName);
 
-  // Generate PDF
+  // Regenerate PDF (always fresh, latest data ke saath)
   await generateInvoicePDF(data, pdfPath);
 
-  // Save PDF Path
+  // Save/Update PDF Path
   await db.query(invoicePutQueries.updateInvoicePdf, [pdfPath, id, owner_id]);
 
-  // Response
-  return res.status(200).json({
-    success: true,
-    message: "Invoice PDF generated successfully",
-    pdf_path: pdfPath,
+  // Directly send file for download
+  return res.download(pdfPath, pdfName, (err) => {
+    if (err) {
+      console.error("PDF download error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to download PDF",
+        });
+      }
+    }
   });
-});
-
-const downloadInvoicePDF = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const owner_id = req.owner.id;
-
-  const [invoice] = await db.query(invoiceGetQueries.getInvoicePdf, [id, owner_id]);
-
-  if (invoice.length === 0) {
-    return res.status(404).json({ success: false, message: "Invoice not found" });
-  }
-
-  if (!invoice[0].pdf_path || !fs.existsSync(invoice[0].pdf_path)) {
-    return res.status(404).json({
-      success: false,
-      message: "PDF not found on server. Please regenerate.",
-    });
-  }
-
-  return res.download(invoice[0].pdf_path);
 });
 
 const deleteInvoice = asyncHandler(async (req, res) => {
@@ -873,8 +871,7 @@ module.exports = {
   getInvoiceDashboard,
   getInvoicePreview,
   calculateInvoice,
-  generateInvoicePDFController,
-  downloadInvoicePDF,
+  getInvoicePDF,
   shareInvoice,
   updateInvoice,
   deleteInvoice,

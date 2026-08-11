@@ -16,7 +16,6 @@ CREATE TABLE owners (
     password VARCHAR(255) NOT NULL,
     language VARCHAR(50) DEFAULT 'English (US)',
     timezone VARCHAR(100) DEFAULT '(GMT+05:30) India Standard Time',
-    two_factor_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -83,13 +82,11 @@ CREATE TABLE vendors (
     payment_terms VARCHAR(50) DEFAULT 'Net 15',
     gst_vat_number VARCHAR(30) UNIQUE,
 
-    default_reminder_days INT DEFAULT 7,
-
     status ENUM('Active','Inactive') DEFAULT 'Active',
 
     contact_person VARCHAR(100),
     email VARCHAR(150) UNIQUE,
-    phone VARCHAR(15),
+    phone VARCHAR(15) NOT NULL,
     alternate_phone VARCHAR(15),
 
     address_line_1 VARCHAR(255),

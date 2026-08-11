@@ -15,7 +15,6 @@ const vendorBillPostQueries = {
       paid_amount,
       remaining_amount,
       due_date,
-      reminder_days,
       payment_mode,
       payment_reference,
       status,

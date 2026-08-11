@@ -152,14 +152,6 @@ FROM owners
 WHERE id = ?
 `,
 
-getInvoicePdf: `
-SELECT
-    pdf_path
-FROM invoices
-WHERE id = ?
-AND owner_id = ?
-`,
-
 getProductForCalculation: `
 SELECT
     id,

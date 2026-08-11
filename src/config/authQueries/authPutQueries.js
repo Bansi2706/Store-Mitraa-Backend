@@ -10,7 +10,6 @@ const authPutQueries = {
       logo = ?,
       language = ?,
       timezone = ?,
-      two_factor_enabled = ?
     WHERE id = ?
   `,
 
