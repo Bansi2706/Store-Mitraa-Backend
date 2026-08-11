@@ -6,6 +6,22 @@ const invoicePutQueries = {
     AND owner_id = ?
   `,
 
+  updateCustomer: `
+    UPDATE customers
+    SET
+      first_name = ?,
+      last_name = ?,
+      phone_number = ?,
+      email = ?,
+      address = ?,
+      city = ?,
+      state = ?,
+      pincode = ?,
+      gst_number = ?
+    WHERE id = ?
+    AND owner_id = ?
+  `,
+
   getInvoice: `
     SELECT id
     FROM invoices

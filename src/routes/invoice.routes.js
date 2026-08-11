@@ -11,7 +11,8 @@ const {
   getInvoiceDashboard,
   getInvoicePreview,
   getInvoiceById,
-  getInvoicePDF,        
+  getInvoicePDF, 
+  getPublicInvoicePDF,       
   shareInvoice,
   updateInvoice,
   deleteInvoice,
@@ -31,6 +32,9 @@ router.post("/", verifyToken, createInvoice);
 
 // Get All Invoices
 router.get("/", verifyToken, getAllInvoices);
+
+// Public PDF route — NO verifyToken, koi bhi khol sakta hai agar token match kare
+router.get("/public/:id/:token/pdf", getPublicInvoicePDF);
 
 // Invoice Preview
 router.get("/:id/preview", verifyToken, getInvoicePreview);

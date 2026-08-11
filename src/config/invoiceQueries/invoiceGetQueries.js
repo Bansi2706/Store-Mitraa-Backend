@@ -125,6 +125,8 @@ getInvoicePreview: `
 
 getInvoicePreviewItems: `
 SELECT
+    id,
+    product_id,
     product_name,
     product_sku,
     mrp,

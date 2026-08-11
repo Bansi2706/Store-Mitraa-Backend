@@ -3,6 +3,7 @@ const fs = require("fs");
 
 const db = require("../config/db");
 const asyncHandler = require("../utils/asyncHandler");
+const { generateShareToken, verifyShareToken } = require("../utils/shareToken");
 
 const invoicePostQueries = require("../config/invoiceQueries/invoicePostQueries");
 const invoiceGetQueries = require("../config/invoiceQueries/invoiceGetQueries");
@@ -345,7 +346,7 @@ const getInvoicePreview = asyncHandler(async (req, res) => {
 
   // Get Owner Details
   const [owner] = await db.query(invoiceGetQueries.getOwnerDetails, [owner_id]);
-  
+
   const ownerData = owner[0];
 
   if (ownerData && ownerData.logo) {
@@ -370,10 +371,9 @@ const getInvoicePreview = asyncHandler(async (req, res) => {
 const getInvoiceDashboard = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
 
-  const [result] = await db.query(
-    invoiceGetQueries.getInvoiceDashboard,
-    [owner_id]
-  );
+  const [result] = await db.query(invoiceGetQueries.getInvoiceDashboard, [
+    owner_id,
+  ]);
 
   res.status(200).json({
     success: true,
@@ -385,10 +385,10 @@ const shareInvoice = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const owner_id = req.owner.id;
 
-  const [invoice] = await db.query(
-    invoiceGetQueries.getInvoicePreview,
-    [id, owner_id]
-  );
+  const [invoice] = await db.query(invoiceGetQueries.getInvoicePreview, [
+    id,
+    owner_id,
+  ]);
 
   if (invoice.length === 0) {
     return res.status(404).json({
@@ -398,6 +398,7 @@ const shareInvoice = asyncHandler(async (req, res) => {
   }
 
   const data = invoice[0];
+  const token = generateShareToken(id);   
 
   res.status(200).json({
     success: true,
@@ -406,16 +407,61 @@ const shareInvoice = asyncHandler(async (req, res) => {
       phone_number: data.phone_number,
       invoice_number: data.invoice_number,
       total_amount: data.total_amount,
-      // Combined generate+download route
-      pdf_url: `${req.protocol}://${req.get("host")}/api/invoices/${id}/pdf`,
+      pdf_url: `${req.protocol}://${req.get("host")}/api/invoices/public/${id}/${token}/pdf`,  // ✅ changed
     },
   });
+});
+
+// Public route — no auth required, HMAC token se verify hota hai
+const getPublicInvoicePDF = asyncHandler(async (req, res) => {
+  const { id, token } = req.params;
+
+  if (!verifyShareToken(id, token)) {
+    return res.status(403).json({
+      success: false,
+      message: "Invalid or expired share link",
+    });
+  }
+
+  // owner_id khud DB se nikal lo (auth nahi hai, isliye req.owner nahi milega)
+  const [invoiceRow] = await db.query(
+    `SELECT owner_id FROM invoices WHERE id = ?`,
+    [id],
+  );
+
+  if (invoiceRow.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "Invoice not found",
+    });
+  }
+
+  // req.owner fake set karo taaki getInvoicePDF reuse ho sake
+  req.params.id = id;
+  req.owner = { id: invoiceRow[0].owner_id };
+
+  return getInvoicePDF(req, res);
 });
 
 const updateInvoice = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const { customer_id, payment_mode, paid_amount, notes, items } = req.body;
+   const {
+    customer_id,
+    first_name,
+    last_name,
+    phone_number,
+    email,
+    address,
+    city,
+    state,
+    pincode,
+    gst_number,
+    payment_mode,
+    paid_amount,
+    notes,
+    items,
+  } = req.body;
 
   const owner_id = req.owner.id;
 
@@ -444,6 +490,20 @@ const updateInvoice = asyncHandler(async (req, res) => {
       message: "Customer not found",
     });
   }
+
+   await db.query(invoicePutQueries.updateCustomer, [
+    first_name,
+    last_name,
+    phone_number,
+    email,
+    address,
+    city,
+    state,
+    pincode,
+    gst_number,
+    customer_id,
+    owner_id,
+  ]);
 
   // Check Items
   if (!items || items.length === 0) {
@@ -507,7 +567,8 @@ const updateInvoice = asyncHandler(async (req, res) => {
     }
 
     // AFTER — historical mrp preferred over live product price
-    const mrp = item.mrp !== undefined ? Number(item.mrp) : Number(product.product_mrp);
+    const mrp =
+      item.mrp !== undefined ? Number(item.mrp) : Number(product.product_mrp);
     const buyingPrice = Number(product.buying_price);
 
     const quantity = Number(item.quantity);
@@ -761,27 +822,58 @@ const getInvoicePDF = asyncHandler(async (req, res) => {
     });
   }
 
-  // Prepare Data
-  const data = {
-    owner: owner[0],
-    invoice: invoice[0],
-    items,
-  };
+const ownerData = owner[0];
 
-  const customerId = invoice[0].customer_id;
-  const firstName = invoice[0].first_name || "";
-  const lastName = invoice[0].last_name || "";
+// Owner ke naam se safe folder name (logo aur invoice folder dono ke liye reuse hoga)
+const safeOwnerName = (ownerData.owner_name || "")
+  .trim()
+  .replace(/[^a-zA-Z0-9]+/g, "_")
+  .replace(/^_+|_+$/g, "");
 
-  const customerFolder = `customer_${customerId}_${firstName}_${lastName}`
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/_$/, "");
+const ownerFolder = `owner_${owner_id}_${safeOwnerName}`;
 
-  const folderPath = path.join(
+// getInvoicePDF mein logo handling section replace karo
+if (ownerData.logo) {
+  const logoAbsolutePath = path.join(
     __dirname,
-    "../../uploads/invoices",
-    customerFolder,
+    "../../uploads/owners",
+    ownerFolder,
+    ownerData.logo,
   );
+
+    if (fs.existsSync(logoAbsolutePath)) {
+    const logoBuffer = fs.readFileSync(logoAbsolutePath);
+    const ext = path.extname(logoAbsolutePath).slice(1).toLowerCase();
+    const mimeType = ext === "jpg" ? "jpeg" : ext; // png/jpeg/webp
+    ownerData.logo = `data:image/${mimeType};base64,${logoBuffer.toString("base64")}`;
+  } else {
+    ownerData.logo = null;
+  }
+}
+
+// Prepare Data
+const data = {
+  owner: ownerData,
+  invoice: invoice[0],
+  items,
+};
+
+const customerId = invoice[0].customer_id;
+const firstName = invoice[0].first_name || "";
+const lastName = invoice[0].last_name || "";
+
+const customerFolder = `customer_${customerId}_${firstName}_${lastName}`
+  .replace(/\s+/g, "_")
+  .replace(/_+/g, "_")
+  .replace(/_$/, "");
+
+// uploads/invoices/owner_<id>_<name>/customer_<id>_<name>/
+const folderPath = path.join(
+  __dirname,
+  "../../uploads/invoices",
+  ownerFolder,
+  customerFolder,
+);
 
   // Create folder if it doesn't exist
   if (!fs.existsSync(folderPath)) {
@@ -872,6 +964,7 @@ module.exports = {
   getInvoicePreview,
   calculateInvoice,
   getInvoicePDF,
+    getPublicInvoicePDF,
   shareInvoice,
   updateInvoice,
   deleteInvoice,
