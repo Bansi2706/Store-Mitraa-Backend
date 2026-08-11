@@ -9,7 +9,7 @@ const authPutQueries = {
       address = ?,
       logo = ?,
       language = ?,
-      timezone = ?,
+      timezone = ?
     WHERE id = ?
   `,
 
