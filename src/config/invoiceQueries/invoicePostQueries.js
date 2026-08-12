@@ -37,23 +37,24 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
 
   createInvoice: `
-    INSERT INTO invoices
-    (
-      owner_id,
-      customer_id,
-      invoice_number,
-      subtotal,
-      discount_total,
-      tax_total,
-      total_amount,
-      paid_amount,
-      remaining_amount,
-      payment_mode,
-      payment_status,
-      notes
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `,
+  INSERT INTO invoices
+  (
+    owner_id,
+    customer_id,
+    invoice_number,
+    subtotal,
+    discount_total,
+    extra_discount,
+    tax_total,
+    total_amount,
+    paid_amount,
+    remaining_amount,
+    payment_mode,
+    payment_status,
+    notes
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`,
 
  createInvoiceItem: `
 INSERT INTO invoice_items

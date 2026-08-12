@@ -51,21 +51,22 @@ const invoicePutQueries = {
   `,
 
   updateInvoice: `
-    UPDATE invoices
-    SET
-      customer_id = ?,
-      subtotal = ?,
-      discount_total = ?,
-      tax_total = ?,
-      total_amount = ?,
-      paid_amount = ?,
-      remaining_amount = ?,
-      payment_mode = ?,
-      payment_status = ?,
-      notes = ?
-    WHERE id = ?
-    AND owner_id = ?
-  `,
+  UPDATE invoices
+  SET
+    customer_id = ?,
+    subtotal = ?,
+    discount_total = ?,
+    extra_discount = ?,
+    tax_total = ?,
+    total_amount = ?,
+    paid_amount = ?,
+    remaining_amount = ?,
+    payment_mode = ?,
+    payment_status = ?,
+    notes = ?
+  WHERE id = ?
+  AND owner_id = ?
+`,
 
   deleteInvoiceItems: `
     DELETE FROM invoice_items

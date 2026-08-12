@@ -9,6 +9,7 @@ const invoicePostQueries = require("../config/invoiceQueries/invoicePostQueries"
 const invoiceGetQueries = require("../config/invoiceQueries/invoiceGetQueries");
 const invoicePutQueries = require("../config/invoiceQueries/invoicePutQueries");
 const invoiceDeleteQueries = require("../config/invoiceQueries/invoiceDeleteQueries");
+const customerPutQueries = require("../config/customerQueries/customerPutQueries");
 
 const generateInvoicePDF = require("../utils/pdfGenerator");
 
@@ -25,6 +26,7 @@ const createInvoice = asyncHandler(async (req, res) => {
     address,
     payment_mode,
     paid_amount,
+    extra_discount,
     notes,
     items,
   } = req.body;
@@ -151,7 +153,9 @@ const createInvoice = asyncHandler(async (req, res) => {
     });
   }
 
-  const totalAmount = subtotal - discountTotal + taxTotal;
+  const extraDiscount = Number(extra_discount || 0);
+
+  const totalAmount = subtotal - discountTotal - extraDiscount + taxTotal;
 
   const paidAmount = Number(paid_amount || 0);
 
@@ -193,6 +197,7 @@ const createInvoice = asyncHandler(async (req, res) => {
     invoiceNumber,
     subtotal,
     discountTotal,
+    extraDiscount,  
     taxTotal,
     totalAmountRounded,
     paidAmountRounded,
@@ -459,6 +464,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
     gst_number,
     payment_mode,
     paid_amount,
+    extra_discount,
     notes,
     items,
   } = req.body;
@@ -490,6 +496,18 @@ const updateInvoice = asyncHandler(async (req, res) => {
       message: "Customer not found",
     });
   }
+
+  const [phoneExists] = await db.query(
+  customerPutQueries.checkPhoneExcludingSelf,
+  [phone_number, customer_id, owner_id],
+);
+
+if (phoneExists.length > 0) {
+  return res.status(400).json({
+    success: false,
+    message: "Phone number already exists for another customer",
+  });
+}
 
    await db.query(invoicePutQueries.updateCustomer, [
     first_name,
@@ -613,7 +631,9 @@ const updateInvoice = asyncHandler(async (req, res) => {
     });
   }
 
-  const totalAmount = subtotal - discountTotal + taxTotal;
+  const extraDiscount = Number(extra_discount || 0);
+
+  const totalAmount = subtotal - discountTotal - extraDiscount + taxTotal;
 
   const paidAmount = Number(paid_amount || 0);
 
@@ -650,6 +670,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
     customer_id,
     subtotal,
     discountTotal,
+    extraDiscount,
     taxTotal,
     totalAmountRounded,
     paidAmountRounded,

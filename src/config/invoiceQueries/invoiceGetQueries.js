@@ -94,6 +94,7 @@ getInvoicePreview: `
 
     i.subtotal,
     i.discount_total,
+    i.extra_discount,
     i.tax_total,
     i.total_amount,
     i.paid_amount,

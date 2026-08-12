@@ -539,6 +539,13 @@
                 <span>Item Discount:</span>
                 <span class="value">-₹<%= Number(invoice.discount_total).toFixed(2) %></span>
             </div>
+
+            <% if (Number(invoice.extra_discount) > 0) { %>
+                <div class="total-row">
+                    <span>Extra Discount:</span>
+                    <span class="value">-₹<%= Number(invoice.extra_discount).toFixed(2) %></span>
+                </div>
+            <% } %>
             
             <div class="total-row tax-discount">
                 <span>Tax:</span>
