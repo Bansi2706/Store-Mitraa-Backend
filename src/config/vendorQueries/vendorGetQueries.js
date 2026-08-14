@@ -4,6 +4,13 @@ const vendorGetQueries = {
     FROM vendors
     WHERE owner_id = ?
     ORDER BY id DESC
+    LIMIT ? OFFSET ?
+  `,
+
+  getVendorsCount: `
+    SELECT COUNT(*) AS total
+    FROM vendors
+    WHERE owner_id = ?
   `,
 
   getVendorById: `

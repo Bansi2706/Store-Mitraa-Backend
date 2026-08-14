@@ -20,6 +20,13 @@ const invoiceGetQueries = {
     WHERE i.owner_id = ?
 
     ORDER BY i.id DESC
+    LIMIT ? OFFSET ?
+  `,
+
+  getInvoicesCount: `
+    SELECT COUNT(*) AS total
+    FROM invoices i
+    WHERE i.owner_id = ?
   `,
 
   getInvoiceById: `
@@ -83,6 +90,14 @@ ORDER BY id ASC
   INNER JOIN customers c
     ON i.customer_id = c.id
 
+  WHERE i.owner_id = ?
+`,
+
+  searchInvoicesCount: `
+  SELECT COUNT(*) AS total
+  FROM invoices i
+  INNER JOIN customers c
+    ON i.customer_id = c.id
   WHERE i.owner_id = ?
 `,
 

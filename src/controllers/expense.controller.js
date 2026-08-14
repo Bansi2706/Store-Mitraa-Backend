@@ -37,40 +37,79 @@ const createExpense = asyncHandler(async (req, res) => {
 const getAllExpenses = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
 
-  const [expenses] = await db.query(
-    expenseGetQueries.getAllExpenses,
-    [owner_id]
-  );
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
+
+  const [expenses] = await db.query(expenseGetQueries.getAllExpenses, [
+    owner_id,
+    limit,
+    offset,
+  ]);
+
+  const [countResult] = await db.query(expenseGetQueries.getExpensesCount, [
+    owner_id,
+  ]);
+
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
 
   res.status(200).json({
     success: true,
     data: expenses,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 
 const getExpensesByRange = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
- 
+
   const allowedRanges = ["week", "month", "all"];
   const range = allowedRanges.includes(req.query.range)
     ? req.query.range
     : "all";
- 
+
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 8);
+  const offset = (page - 1) * limit;
+
   let listQuery = expenseGetQueries.getAllExpensesAll;
- 
+  let countQuery = expenseGetQueries.getExpensesAllCount;
+
   if (range === "week") {
     listQuery = expenseGetQueries.getAllExpensesWeek;
+    countQuery = expenseGetQueries.getExpensesWeekCount;
   } else if (range === "month") {
     listQuery = expenseGetQueries.getAllExpensesMonth;
+    countQuery = expenseGetQueries.getExpensesMonthCount;
   }
- 
-  const [expenses] = await db.query(listQuery, [owner_id]);
- 
+
+  const [expenses] = await db.query(listQuery, [owner_id, limit, offset]);
+  const [countResult] = await db.query(countQuery, [owner_id]);
+
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
+
   res.status(200).json({
     success: true,
     data: {
       items: expenses,
-      total: expenses.length,
+      total: totalRecords, // ab pura filtered total hai, sirf current page ka length nahi
+    },
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
     },
   });
 });
@@ -99,65 +138,89 @@ const getExpenseById = asyncHandler(async (req, res) => {
 
 const searchExpenses = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
- 
+
   const {
     keyword = "",
     category = "",
     payment_mode = "",
     range = "",
   } = req.query;
- 
-  let query = expenseGetQueries.searchExpenses;
+
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
+
+  let baseCondition = ``;
   const values = [owner_id];
- 
+
   if (keyword.trim()) {
-    query += `
+    baseCondition += `
       AND (
         title LIKE ?
         OR notes LIKE ?
         OR payment_mode LIKE ?
       )
     `;
- 
+
     const search = `%${keyword.trim()}%`;
     values.push(search, search, search);
   }
- 
+
   if (category && category.toLowerCase() !== "all") {
-    query += ` AND category = ? `;
+    baseCondition += ` AND category = ? `;
     values.push(category);
   }
- 
+
   if (payment_mode && payment_mode.toLowerCase() !== "all") {
-    query += ` AND payment_mode = ? `;
+    baseCondition += ` AND payment_mode = ? `;
     values.push(payment_mode);
   }
- 
+
   if (range === "week") {
-    query += ` AND YEARWEEK(expense_date, 1) = YEARWEEK(CURDATE(), 1) `;
+    baseCondition += ` AND YEARWEEK(expense_date, 1) = YEARWEEK(CURDATE(), 1) `;
   } else if (range === "month") {
-    query += `
+    baseCondition += `
       AND YEAR(expense_date) = YEAR(CURDATE())
       AND MONTH(expense_date) = MONTH(CURDATE())
     `;
   }
   // range === "all" ya empty ho toh koi date filter nahi
- 
-  query += ` ORDER BY expense_date DESC, id DESC `;
- 
-  const [expenses] = await db.query(query, values);
- 
-  const visibleTotal = expenses.reduce(
-    (sum, item) => sum + Number(item.amount),
-    0
-  );
- 
+
+  // Count query — same filters, WHERE owner_id = ? + baseCondition
+  const countQuery = `
+    SELECT COUNT(*) AS total, IFNULL(SUM(amount), 0) AS total_amount
+    FROM expenses
+    WHERE owner_id = ?
+    ${baseCondition}
+  `;
+  const [countResult] = await db.query(countQuery, values);
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
+  const visibleTotal = Number(countResult[0].total_amount); // ✅ ab poore filtered set ka total hai, sirf current page ka nahi
+
+  // Data query — same filters + ORDER BY + LIMIT/OFFSET
+  const dataQuery = `
+    ${expenseGetQueries.searchExpenses}
+    ${baseCondition}
+    ORDER BY expense_date DESC, id DESC
+    LIMIT ? OFFSET ?
+  `;
+  const [expenses] = await db.query(dataQuery, [...values, limit, offset]);
+
   res.status(200).json({
     success: true,
     data: {
       items: expenses,
-      total: expenses.length,
+      total: totalRecords,
       visible_total: visibleTotal.toFixed(2),
+    },
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
     },
   });
 });

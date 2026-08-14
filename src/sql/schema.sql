@@ -233,6 +233,7 @@ CREATE TABLE invoices (
 
     subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     discount_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    extra_discount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     tax_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
 
@@ -254,6 +255,7 @@ CREATE TABLE invoices (
     ) NOT NULL DEFAULT 'Pending',
 
     notes TEXT,
+    pdf_path VARCHAR(500) DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

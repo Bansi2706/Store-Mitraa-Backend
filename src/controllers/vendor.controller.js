@@ -93,18 +93,38 @@ const createVendor = asyncHandler(async (req, res) => {
 });
 
 const getAllVendors = asyncHandler(async (req, res) => {
-    const owner_id = req.owner.id;
+  const owner_id = req.owner.id;
 
-    const [vendors] = await db.query(
-        vendorGetQueries.getAllVendors,
-        [owner_id]
-    );
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
 
-    res.status(200).json({
-        success: true,
-        count: vendors.length,
-        data: vendors,
-    });
+  const [vendors] = await db.query(vendorGetQueries.getAllVendors, [
+    owner_id,
+    limit,
+    offset,
+  ]);
+
+  const [countResult] = await db.query(vendorGetQueries.getVendorsCount, [
+    owner_id,
+  ]);
+
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
+
+  res.status(200).json({
+    success: true,
+    count: vendors.length,
+    data: vendors,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+  });
 });
 
 const getVendorById = asyncHandler(async (req, res) => {
@@ -234,49 +254,58 @@ const filterVendors = asyncHandler(async (req, res) => {
 
   const { q, status } = req.query;
 
-  let query = `
-    SELECT *
-    FROM vendors
-    WHERE owner_id = ?
-  `;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
 
+  let baseCondition = `WHERE owner_id = ?`;
   const values = [owner_id];
 
   // Search
   if (q) {
     const search = `%${q}%`;
-
-    query += `
+    baseCondition += `
       AND (
         vendor_company_name LIKE ?
         OR email LIKE ?
         OR phone LIKE ?
       )
     `;
-
-    values.push(
-      search,
-      search,
-      search
-    );
+    values.push(search, search, search);
   }
 
   // Status Filter
-  if (
-    status &&
-    status !== "All Vendors"
-  ) {
-    query += ` AND status = ?`;
+  if (status && status !== "All Vendors") {
+    baseCondition += ` AND status = ?`;
     values.push(status);
   }
 
-  query += ` ORDER BY id DESC`;
+  // Count query (pagination ke liye pehle total nikalna)
+  const countQuery = `SELECT COUNT(*) AS total FROM vendors ${baseCondition}`;
+  const [countResult] = await db.query(countQuery, values);
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
 
-  const [vendors] = await db.query(query, values);
+  // Data query
+  const dataQuery = `
+    SELECT * FROM vendors
+    ${baseCondition}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+  `;
+  const [vendors] = await db.query(dataQuery, [...values, limit, offset]);
 
   return res.status(200).json({
     success: true,
     data: vendors,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 

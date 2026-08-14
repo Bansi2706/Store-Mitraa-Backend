@@ -177,15 +177,36 @@ const createProduct = asyncHandler(async (req, res) => {
 const getAllProducts = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
 
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
+
   const [products] = await db.query(productGetQueries.getAllProducts, [
     owner_id,
+    limit,
+    offset,
   ]);
+
+  const [countResult] = await db.query(productGetQueries.getProductsCount, [
+    owner_id,
+  ]);
+
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
 
   const productsWithUrls = products.map((p) => attachImageUrls({ ...p }));
 
   res.status(200).json({
     success: true,
     data: productsWithUrls,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 
@@ -487,47 +508,35 @@ const getProductDashboard = asyncHandler(async (req, res) => {
 const filterProducts = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
 
-  const {
-    q,
-    category,
-    status,
-    sort,
-  } = req.query;
+  const { q, category, status, sort } = req.query;
 
-  let query = `
-    SELECT *,
-      CASE
-        WHEN stock_quantity = 0 THEN 'Out of Stock'
-        WHEN stock_quantity <= low_stock_threshold THEN 'Low Stock'
-        ELSE 'In Stock'
-      END AS stock_status
-    FROM products
-    WHERE owner_id = ?
-  `;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
 
+  let baseCondition = `WHERE owner_id = ?`;
   const values = [owner_id];
 
   // Search
   if (q) {
-    query += `
+    baseCondition += `
       AND (
         product_name LIKE ?
         OR product_sku LIKE ?
       )
     `;
-
     values.push(`%${q}%`, `%${q}%`);
   }
 
   // Category
   if (category && category !== "All Categories") {
-    query += ` AND product_category = ?`;
+    baseCondition += ` AND product_category = ?`;
     values.push(category);
   }
 
   // Stock Status
   if (status) {
-    query += `
+    baseCondition += `
       AND (
         CASE
           WHEN stock_quantity = 0 THEN 'Out of Stock'
@@ -536,35 +545,57 @@ const filterProducts = asyncHandler(async (req, res) => {
         END
       ) = ?
     `;
-
     values.push(status);
   }
 
+  // Count query (same filters, without sort/limit)
+  const countQuery = `SELECT COUNT(*) AS total FROM products ${baseCondition}`;
+  const [countResult] = await db.query(countQuery, values);
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
+
   // Sorting
+  let orderBy = " ORDER BY id DESC";
   switch (sort) {
     case "oldest":
-      query += " ORDER BY id ASC";
+      orderBy = " ORDER BY id ASC";
       break;
-
     case "name_asc":
-      query += " ORDER BY product_name ASC";
+      orderBy = " ORDER BY product_name ASC";
       break;
-
     case "name_desc":
-      query += " ORDER BY product_name DESC";
+      orderBy = " ORDER BY product_name DESC";
       break;
-
-    default:
-      query += " ORDER BY id DESC";
   }
 
-  const [products] = await db.query(query, values);
+  const dataQuery = `
+    SELECT *,
+      CASE
+        WHEN stock_quantity = 0 THEN 'Out of Stock'
+        WHEN stock_quantity <= low_stock_threshold THEN 'Low Stock'
+        ELSE 'In Stock'
+      END AS stock_status
+    FROM products
+    ${baseCondition}
+    ${orderBy}
+    LIMIT ? OFFSET ?
+  `;
+
+  const [products] = await db.query(dataQuery, [...values, limit, offset]);
 
   const productsWithUrls = products.map((p) => attachImageUrls({ ...p }));
 
   return res.status(200).json({
     success: true,
     data: productsWithUrls,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 

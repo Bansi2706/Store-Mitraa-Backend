@@ -245,13 +245,34 @@ const createInvoice = asyncHandler(async (req, res) => {
 const getAllInvoices = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
 
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
+
   const [invoices] = await db.query(invoiceGetQueries.getAllInvoices, [
     owner_id,
+    limit,
+    offset,
   ]);
+
+  const [countResult] = await db.query(invoiceGetQueries.getInvoicesCount, [
+    owner_id,
+  ]);
+
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
 
   res.status(200).json({
     success: true,
     data: invoices,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 
@@ -260,12 +281,15 @@ const searchInvoices = asyncHandler(async (req, res) => {
 
   const { keyword = "", status = "" } = req.query;
 
-  let query = invoiceGetQueries.searchInvoices;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
 
+  let baseCondition = ``;
   const values = [owner_id];
 
   if (keyword.trim()) {
-    query += `
+    baseCondition += `
       AND (
         i.invoice_number LIKE ?
         OR c.first_name LIKE ?
@@ -281,22 +305,40 @@ const searchInvoices = asyncHandler(async (req, res) => {
 
   // "All Invoices" ke liye status filter skip karo
   if (status && status.toLowerCase() !== "all") {
-    query += `
+    baseCondition += `
       AND i.payment_status = ?
     `;
 
     values.push(status);
   }
 
-  query += `
+  // Count query — same filters
+  const countQuery = `${invoiceGetQueries.searchInvoicesCount} ${baseCondition}`;
+  const [countResult] = await db.query(countQuery, values);
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
+
+  // Data query — same filters + ORDER BY + LIMIT/OFFSET
+  const dataQuery = `
+    ${invoiceGetQueries.searchInvoices}
+    ${baseCondition}
     ORDER BY i.id DESC
+    LIMIT ? OFFSET ?
   `;
 
-  const [invoices] = await db.query(query, values);
+  const [invoices] = await db.query(dataQuery, [...values, limit, offset]);
 
   return res.status(200).json({
     success: true,
     data: invoices,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 

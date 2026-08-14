@@ -52,7 +52,14 @@ GROUP BY
     c.updated_at
 
 ORDER BY c.created_at DESC
+LIMIT ? OFFSET ?
 `,
+
+  getCustomersCount: `
+    SELECT COUNT(*) AS total
+    FROM customers
+    WHERE owner_id = ?
+  `,
 
   getCustomerById: `
     SELECT *

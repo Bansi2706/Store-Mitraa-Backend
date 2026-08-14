@@ -79,13 +79,34 @@ const createCustomer = asyncHandler(async (req, res) => {
 const getAllCustomers = asyncHandler(async (req, res) => {
   const owner_id = req.owner.id;
 
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+  const offset = (page - 1) * limit;
+
   const [customers] = await db.query(customerGetQueries.getAllCustomers, [
     owner_id,
+    limit,
+    offset,
   ]);
+
+  const [countResult] = await db.query(customerGetQueries.getCustomersCount, [
+    owner_id,
+  ]);
+
+  const totalRecords = countResult[0].total;
+  const totalPages = Math.ceil(totalRecords / limit);
 
   res.status(200).json({
     success: true,
     data: customers,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 
@@ -190,6 +211,9 @@ const filterCustomers = asyncHandler(async (req, res) => {
 
   const { keyword, status, sort } = req.query;
 
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 10);
+
   const [rows] = await db.query(customerGetQueries.filterCustomers, [owner_id]);
 
   let customers = rows;
@@ -244,9 +268,23 @@ const filterCustomers = asyncHandler(async (req, res) => {
       break;
   }
 
+  // Pagination (filter/sort ke baad, kyunki poora processing JS mein ho raha hai)
+  const totalRecords = customers.length;
+  const totalPages = Math.ceil(totalRecords / limit);
+  const startIndex = (page - 1) * limit;
+  const paginatedCustomers = customers.slice(startIndex, startIndex + limit);
+
   res.status(200).json({
     success: true,
-    data: customers,
+    data: paginatedCustomers,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
   });
 });
 

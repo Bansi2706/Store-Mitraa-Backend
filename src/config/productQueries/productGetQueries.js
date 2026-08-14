@@ -13,7 +13,14 @@ const productGetQueries = {
   WHERE owner_id = ?
 
   ORDER BY id DESC
+  LIMIT ? OFFSET ?
 `,
+
+  getProductsCount: `
+    SELECT COUNT(*) AS total
+    FROM products
+    WHERE owner_id = ?
+  `,
 
   getProductById: `
     SELECT *
